@@ -9,7 +9,7 @@ WEBHOOK_URL = os.getenv("WECOM_WEBHOOK")
 # 目标行业资讯栏目
 TARGET_URL = "https://www.beerw.com/class.asp?id=11"
 # 监控关键词
-KEYWORDS = ["青岛啤酒", "华润啤酒", "青啤", "雀巢", "健康饮用水", "战略合作"]
+KEYWORDS = ["青岛啤酒", "华润啤酒", "百威啤酒"]
 # 已推送链接（去重）
 pushed_links = set()
 
@@ -137,21 +137,21 @@ def run_monitor():
         send_to_wecom_markdown("🍺 **Beerw 监控测试**\n通道正常，但未抓取到新闻列表")
     
     # 2. 正式推送：今日+含关键词的新闻（测试完成后可取消注释）
-    # for news in news_list:
-    #     if news["link"] in pushed_links:
-    #         continue
-    #     if not news["time"] or not is_today(news["time"]):
-    #         continue
-    #     matched_kws = check_news_keywords(news)
-    #     if matched_kws:
-    #         md_content = (
-    #             f"🍺 **Beerw 行业资讯提醒**\n"
-    #             f"[{news['title']}]({news['link']})\n"
-    #             f"发布时间：{news['time']}\n"
-    #             f"命中关键词：{', '.join(matched_kws)}"
-    #         )
-    #         send_to_wecom_markdown(md_content)
-    #         pushed_links.add(news["link"])
+     for news in news_list:
+         if news["link"] in pushed_links:
+             continue
+         if not news["time"] or not is_today(news["time"]):
+             continue
+         matched_kws = check_news_keywords(news)
+         if matched_kws:
+             md_content = (
+                 f"🍺 **Beerw 行业资讯提醒**\n"
+                 f"[{news['title']}]({news['link']})\n"
+                 f"发布时间：{news['time']}\n"
+                 f"命中关键词：{', '.join(matched_kws)}"
+             )
+             send_to_wecom_markdown(md_content)
+             pushed_links.add(news["link"])
     
     print("本轮监控结束")
 
