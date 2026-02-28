@@ -149,12 +149,12 @@ def run_monitor():
         if matched_kws:
             # 构造带超链接的Markdown消息
             md_content = (
-                f"🍺 **Beerw 行业资讯提醒**\n\n"
-                f"**[{news['title']}]({news['link']})**\n\n"
-                f"发布时间：{news['time']}\n\n"
-                f"命中关键词：{', '.join(matched_kws)}\n\n"
-                f"@all"
-            )
+    f"🍺 **Beerw 行业资讯提醒**\n"
+    f"[{news['title']}]({news['link']})\n"
+    f"发布时间：{news['time']}\n"
+    f"命中关键词：{', '.join(matched_kws)}\n"
+    f"@all"
+)
             print(f"推送今日新闻：{news['title']}")
             send_to_wecom_markdown(md_content)
             pushed_links.add(news["link"])
