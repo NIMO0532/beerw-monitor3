@@ -139,9 +139,11 @@ def run_monitor():
             continue
         
         # 只处理今天发布的新闻
+       # if not news["time"] or not is_today(news["time"]):
+        #    continue
+       # 临时测试：不过滤日期
         if not news["time"] or not is_today(news["time"]):
-            continue
-        
+            continue 
         # 检查关键词
         matched_kws = check_news_keywords(news)
         if matched_kws:
