@@ -64,7 +64,7 @@ def extract_industry_news():
         soup = BeautifulSoup(resp.text, "html.parser")
 
         # 适配行业资讯页面结构：抓取新闻列表项
-        news_items = soup.select("div[class*='news'] li, ul[class*='list'] li, td a[href*='/news/']")
+        news_items = soup.find_all("a", href=re.compile(r"/news/\d+\.html"))
         for item in news_items:
             # 提取新闻链接和标题
             a_tag = item.find("a", href=re.compile(r"/news/\d+\.html"))
