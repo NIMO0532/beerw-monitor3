@@ -9,7 +9,7 @@ WEBHOOK_URL = os.getenv("WECOM_WEBHOOK")
 # 目标行业资讯栏目
 TARGET_URL = "https://www.beerw.com/class.asp?id=11"
 # 监控关键词（可按需修改）
-KEYWORDS = ["青岛啤酒", "华润啤酒", "青啤", "雀巢", "健康饮用水", "战略合作"]
+KEYWORDS = ["青岛啤酒", "华润啤酒", "青啤", "百威啤酒", "大麦", "酒花","酵母",]
 # 已推送链接（去重）
 pushed_links = set()
 
