@@ -9,7 +9,7 @@ WEBHOOK_URL = os.getenv("WECOM_WEBHOOK")
 # 目标行业资讯栏目
 TARGET_URL = "https://www.beerw.com/class.asp?id=11"
 # 监控关键词（可按需修改）
-KEYWORDS = ["青岛啤酒", "华润啤酒", "啤酒", "百威啤酒", "大麦", "酒花","酵母","燕京啤酒"]
+KEYWORDS = ["青岛啤酒", "华润啤酒", "青啤", "百威啤酒", "大麦", "酒花","酵母","燕京啤酒", "啤酒"]
 # 已推送链接（去重）
 pushed_links = set()
 
@@ -33,7 +33,7 @@ def send_to_wecom_markdown(content):
         print(f"❌ 推送异常：{str(e)}")
 
 def is_within_7_days(date_str):
-    """判断新闻是否为近7天发布（核心修改点）"""
+    """判断新闻是否为近7天发布"""
     if not date_str:
         return False
     # 兼容多种日期格式
@@ -55,18 +55,18 @@ def extract_industry_news():
         "Accept-Language": "zh-CN,zh;q=0.9"
     }
     news_list = []
-    
+
     try:
         session = requests.Session()
         session.mount('https://', requests.adapters.HTTPAdapter(max_retries=3))
         resp = session.get(TARGET_URL, headers=headers, timeout=20)
         resp.encoding = "gb2312"
         html_text = resp.text
-        
+
         soup = BeautifulSoup(html_text, "html.parser")
         list_items = soup.find_all("li")
         print(f"🔍 找到 {len(list_items)} 个列表项")
-        
+
         for li in list_items:
             a_tag = li.find("a")
             if not a_tag:
@@ -75,22 +75,22 @@ def extract_industry_news():
             link = a_tag.get("href", "")
             if not title or len(title) < 5 or not link:
                 continue
-            
+
             # 补全链接
             if link.startswith("/"):
                 link = f"https://www.beerw.com{link}"
             elif not link.startswith("http"):
                 link = f"https://www.beerw.com/{link}"
-            
+
             # 提取并格式化时间
             publish_time = ""
             li_text = li.get_text()
             time_match = re.search(r"(\d{4}[-/年]\d{2}[-/月]\d{2}日?)", li_text)
             if time_match:
                 publish_time = time_match.group(1).replace("年", "-").replace("月", "-").replace("日", "")
-            
+
             news_list.append({"title": title, "link": link, "time": publish_time})
-        
+
         # 去重
         news_list = [dict(t) for t in {tuple(d.items()) for d in news_list}]
         print(f"✅ 最终抓取到 {len(news_list)} 条有效新闻")
@@ -107,8 +107,11 @@ def run_monitor():
     global pushed_links
     print(f"[{datetime.now()}] 开始监控 beerw 行业资讯（近7天）...")
     news_list = extract_industry_news()
-    
-    # 正式推送：仅处理【近7天发布 + 含关键词 + 未推送】的新闻
+
+    # --- 修改部分开始 ---
+    # 用于存放本轮要推送的新闻
+    pending_news = []
+
     for news in news_list:
         if news["link"] in pushed_links:
             continue
@@ -116,16 +119,35 @@ def run_monitor():
             continue
         matched_kws = check_news_keywords(news)
         if matched_kws:
-            md_content = (
-                f"🍺 **Beerw 行业资讯提醒**\n"
-                f"[{news['title']}]({news['link']})\n"
-                f"发布时间：{news['time']}\n"
-                f"命中关键词：{', '.join(matched_kws)}"
-            )
-            print(f"📤 推送新闻：{news['title']}（关键词：{matched_kws}）")
-            send_to_wecom_markdown(md_content)
+            # 将符合条件的新闻加入列表，不立即发送
+            pending_news.append({
+                "title": news['title'],
+                "link": news['link'],
+                "time": news['time'],
+                "keywords": ', '.join(matched_kws)
+            })
+            # 记录已处理，防止下次重复推送
             pushed_links.add(news["link"])
-    
+
+    # 如果有新闻需要推送，生成汇总内容
+    if pending_news:
+        # 生成 Markdown 汇总内容
+        # 顶部标题和时间
+        md_content = f"### 🍺 Beerw 行业资讯汇总\n"
+        md_content += f"> **监控时间**：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
+        md_content += f"> **筛选条件**：近7天发布，包含关键词\n\n"
+
+        # 循环拼接每条新闻
+        for idx, item in enumerate(pending_news, 1):
+            md_content += f"**{idx}. [{item['title']}]({item['link']})**\n"
+            md_content += f"    - 发布时间：{item['time']}\n"
+            md_content += f"    - 命中关键词：{item['keywords']}\n\n"
+
+        print(f"📤 共整理到 {len(pending_news)} 条新闻，准备合并发送...")
+        send_to_wecom_markdown(md_content)
+    else:
+        print("本轮监控未发现符合条件的新消息")
+
     print("本轮监控结束")
 
 if __name__ == "__main__":
