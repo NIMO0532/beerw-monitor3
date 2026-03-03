@@ -1,38 +1,45 @@
 name: Beerw Website Monitor
 
-# 定时触发：每5分钟执行一次（UTC时间，对应北京时间每5分钟）
+# 定时触发与手动触发配置
 on:
   schedule:
-    - cron: '*/120 * * * *'
-  # 手动触发开关（方便测试）
+    # ⏰ 定时触发：每6小时执行一次
+    # 说明：Cron格式为 "分 时 * * *"。
+    # 以下配置表示在每天的 02:00, 08:00, 14:00, 20:00 (UTC时间) 触发。
+    # 对应北京时间：早上10点、下午4点、晚上10点、凌晨4点。
+    - cron: '0 */6 * * *'
+  
+  # 🔧 手动触发：允许在 GitHub 界面上点击“Run workflow”来手动执行
   workflow_dispatch:
 
+# 权限设置：只读仓库内容
 permissions:
   contents: read
 
 jobs:
   monitor:
     runs-on: ubuntu-latest
+
     steps:
       # 1. 拉取仓库代码
       - name: Checkout code
         uses: actions/checkout@v4
       
-      # 2. 配置Python环境
+      # 2. 配置 Python 环境
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.10'
       
-      # 3. 安装依赖包
+      # 3. 安装 Python 依赖
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install requests beautifulsoup4
-      
+
       # 4. 执行监控脚本
       - name: Run monitor script
         env:
-          # 引用私密变量中的Webhook
+          # 引用 GitHub Secrets 中存储的 Webhook
           WECOM_WEBHOOK: ${{ secrets.WECOM_WEBHOOK }}
         run: python beerw_monitor.py
