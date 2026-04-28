@@ -20,7 +20,7 @@ KEYWORDS = ["青岛啤酒", "华润啤酒", "青啤", "百威啤酒", "大麦", 
 # 监控模式
 # "daily": 近24小时内发布
 # "weekly": 近7天内发布
-MONITOR_MODE = "weekly"
+MONITOR_MODE = "daily"
 
 # 已推送链接（去重）
 pushed_links = set()
