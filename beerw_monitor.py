@@ -5,22 +5,22 @@ from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
 
 # --- 配置区 ---
-# 从环境变量读取 Webhook
+# 从环境变量读取 Webhook（GitHub/服务器标准用法）
 WEBHOOK_URL = os.getenv("WECOM_WEBHOOK")
 
-# 目标行业资讯栏目（支持多个，直接在这里添加）
+# 目标行业资讯栏目（支持多个）
 TARGET_URLS = [
     "https://www.beerw.com/class.asp?id=11",
     "https://www.beerw.com/class.asp?id=19"
 ]
 
-# 监控关键词（可按需修改）
+# 监控关键词
 KEYWORDS = ["青岛啤酒", "华润啤酒", "青啤", "百威啤酒", "大麦", "酒花", "酵母", "燕京啤酒", "啤酒"]
 
-# 🆕 监控模式
+# 监控模式
 # "daily": 近24小时内发布
 # "weekly": 近7天内发布
-MONITOR_MODE = "daily" 
+MONITOR_MODE = "daily"
 
 # 已推送链接（去重）
 pushed_links = set()
@@ -49,44 +49,39 @@ def parse_news_time(date_str):
     """统一解析各种格式的日期字符串为 datetime 对象"""
     if not date_str:
         return None
-    
-    # 尝试匹配包含时间的格式 (例如 2026-03-02 22:19:35)
+
+    # 尝试匹配包含时间的格式
     for fmt in ["%Y-%m-%d %H:%M:%S", "%Y/%m/%d %H:%M:%S"]:
         try:
             return datetime.strptime(date_str.strip(), fmt)
         except ValueError:
             continue
-    
-    # 尝试匹配只有日期的格式 (例如 2026-03-02)
+
+    # 尝试匹配只有日期的格式
     for fmt in ["%Y-%m-%d", "%Y/%m/%d"]:
         try:
             return datetime.strptime(date_str.strip(), fmt)
         except ValueError:
             continue
-    
+
     return None
 
 def is_valid_time_range(date_str):
-    """
-    根据 MONITOR_MODE 判断新闻发布时间是否在有效范围内
-    """
+    """根据 MONITOR_MODE 判断新闻发布时间是否在有效范围内"""
     news_time = parse_news_time(date_str)
     if not news_time:
         return False
 
     now = datetime.now()
-    
+
     if MONITOR_MODE == "daily":
-        # 🆕 daily模式：发布时间 >= 现在 - 24小时
         time_diff = now - news_time
-        # 小于等于24小时 (86400秒)
         return time_diff <= timedelta(days=1)
-        
+
     elif MONITOR_MODE == "weekly":
-        # weekly模式：发布时间 >= 现在 - 7天
         time_diff = now - news_time
         return time_diff <= timedelta(days=7)
-        
+
     return False
 
 def extract_industry_news():
@@ -101,8 +96,8 @@ def extract_industry_news():
     try:
         session = requests.Session()
         session.mount('https://', requests.adapters.HTTPAdapter(max_retries=3))
-        
-        # 循环抓取所有配置的栏目
+
+        # 抓取所有栏目
         for target_url in TARGET_URLS:
             print(f"\n🔗 正在抓取栏目：{target_url}")
             resp = session.get(target_url, headers=headers, timeout=20)
@@ -128,26 +123,24 @@ def extract_industry_news():
                 elif not link.startswith("http"):
                     link = f"https://www.beerw.com/{link}"
 
-                # 提取并格式化时间
+                # 提取时间
                 publish_time = ""
                 li_text = li.get_text()
-                # 改进了正则，尝试匹配更精确的时间
                 time_match = re.search(r"(\d{4}[-/年]\d{2}[-/月]\d{2}日? \d{2}:\d{2}:\d{2}|\d{4}[-/年]\d{2}[-/月]\d{2}日?)", li_text)
                 if time_match:
                     raw_time = time_match.group(1)
-                    # 标准化格式，去掉中文字符
                     publish_time = raw_time.replace("年", "-").replace("月", "-").replace("日", "")
 
                 all_news.append({"title": title, "link": link, "time": publish_time})
 
-        # 全局去重 (按链接去重，保持顺序)
+        # 全局去重
         unique_news = []
         seen_links = set()
         for news in all_news:
             if news['link'] not in seen_links:
                 seen_links.add(news['link'])
                 unique_news.append(news)
-                
+
         print(f"\n✅ 所有栏目最终抓取到 {len(unique_news)} 条有效新闻")
         return unique_news
     except Exception as e:
@@ -169,11 +162,10 @@ def run_monitor():
     for news in news_list:
         if news["link"] in pushed_links:
             continue
-            
-        # 🔍 核心判断逻辑：调用新的时间范围检查函数
+
         if not news["time"] or not is_valid_time_range(news["time"]):
             continue
-            
+
         matched_kws = check_news_keywords(news)
         if matched_kws:
             pending_news.append({
@@ -185,7 +177,6 @@ def run_monitor():
             pushed_links.add(news["link"])
 
     if pending_news:
-        # 生成 Markdown 汇总内容
         md_content = f"### 🍺 Beerw 多栏目资讯汇总\n"
         md_content += f"> **监控时间**：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
         md_content += f"> **筛选条件**：{mode_text}发布，包含关键词\n\n"
